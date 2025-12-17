@@ -27,7 +27,14 @@
         }
 
         #falling-canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 1; }
-        .screen { position: absolute; width: 100%; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1.5s ease; z-index: 10; }
+        
+        /* MOBİL OPTİMİZASYON: will-change eklendi */
+        .screen { 
+            position: absolute; width: 100%; height: 100dvh; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            transition: opacity 1.5s ease; z-index: 10; 
+            will-change: opacity; /* GPU Hızlandırma */
+        }
         .hidden { opacity: 0; pointer-events: none; }
         .gone { display: none !important; }
 
@@ -57,7 +64,6 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 40px rgba(255, 200, 50, 0.4);
         }
         
-        /* Zarf açılma süresi 0.5 saniye (Çok Hızlı) */
         .envelope::before { content: ''; position: absolute; top: 0; left: 0; border-left: 140px solid transparent; border-right: 140px solid transparent; border-top: 100px solid #c0392b; transform-origin: top; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 5; }
         
         .envelope::after { content: ''; position: absolute; bottom: 0; left: 0; border-left: 140px solid #7a0a0a; border-right: 140px solid #7a0a0a; border-top: 90px solid transparent; z-index: 4; border-radius: 0 0 4px 4px; }
@@ -70,12 +76,11 @@
         .envelope-wrapper.open .seal { opacity: 0; }
         .heart-particle { position: absolute; font-size: 20px; pointer-events: none; transition: all 1.5s ease-out; opacity: 1; z-index: 55; color: #ff4d4d; filter: drop-shadow(0 0 5px #ff0000); }
 
-        /* --- SAHNE: NOEL BABA GEÇİŞİ (HIZLANDIRILDI) --- */
+        /* --- SAHNE: NOEL BABA GEÇİŞİ --- */
         #santa-screen { z-index: 45; }
         .santa-container {
             position: absolute; left: -300px; top: 40%; font-size: 4rem; white-space: nowrap; opacity: 1;
             filter: drop-shadow(0 0 25px rgba(255, 255, 200, 0.9));
-            /* GÜNCELLENDİ: 5 saniyeden 2.5 saniyeye düşürüldü */
             animation: santaFly 2.5s linear forwards;
         }
         @keyframes santaFly {
@@ -167,13 +172,14 @@
     </div>
 
     <script>
-        // --- ARKA PLAN EFEKTLERİ ---
+        // --- OPTİMİZE EDİLMİŞ ARKA PLAN ---
         const canvas = document.getElementById("falling-canvas");
         const ctx = canvas.getContext("2d");
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
         const icons = ["❄️", "🍬", "🎃", "🍒", "🎋"];
         const particles = [];
+        // Parçacık sayısı 25'e sabitlendi (Performans için)
         for(let i=0; i<25; i++) particles.push({
             x: Math.random() * canvas.width, y: Math.random() * canvas.height,
             size: Math.random() * 20 + 15, speed: Math.random() * 2 + 1,
@@ -181,7 +187,7 @@
         });
         function drawParticles() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 10; // Blur miktarı azaltıldı (Performans için)
             ctx.shadowColor = "rgba(255, 255, 200, 0.5)";
             particles.forEach(p => {
                 ctx.font = p.size + "px Arial"; ctx.globalAlpha = p.opacity; ctx.fillText(p.icon, p.x, p.y);
@@ -191,7 +197,7 @@
         }
         drawParticles();
 
-        // --- 1. AŞAMA - GİRİŞ İKONLARI ---
+        // --- 1. AŞAMA ---
         let introClicked = false;
         function startIntro() {
             if(introClicked) return;
@@ -212,7 +218,7 @@
         }
         function showIcon(index, container, arr) { container.innerHTML = `<div class="intro-icon">${arr[index]}</div>`; }
 
-        // --- 2. AŞAMA - ZARF AÇILMASI (HIZLANDIRILDI: 0.5 Saniye) ---
+        // --- 2. AŞAMA ---
         function triggerEnvelopeOpen() {
             const envelopeScreen = document.getElementById('envelope-screen');
             const santaScreen = document.getElementById('santa-screen');
@@ -222,18 +228,18 @@
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
             const heartIcons = ["❤️", "✨", "💖"];
-            for (let i = 0; i < 20; i++) { createHeartBurst(centerX, centerY, heartIcons[Math.floor(Math.random() * heartIcons.length)]); }
+            // Kalp sayısı 15'e düşürüldü (Performans)
+            for (let i = 0; i < 15; i++) { createHeartBurst(centerX, centerY, heartIcons[Math.floor(Math.random() * heartIcons.length)]); }
             
-            // 0.5 Saniye sonra Noel Baba (Çok Hızlı)
             setTimeout(() => {
                 envelopeScreen.classList.add('hidden');
                 setTimeout(() => envelopeScreen.classList.add('gone'), 1500);
                 santaScreen.classList.remove('hidden'); santaScreen.classList.remove('gone');
-                setTimeout(() => { transitionToLetter(); }, 2500); // 2.5 Saniye Noel Baba
-            }, 500); // Zarf açılma beklemesi 0.5s
+                setTimeout(() => { transitionToLetter(); }, 2500); 
+            }, 500); 
         }
 
-        // --- 3. AŞAMA - MEKTUP ---
+        // --- 3. AŞAMA ---
         function transitionToLetter() {
             const santaScreen = document.getElementById('santa-screen');
             const letterScreen = document.getElementById('letter-screen');
@@ -253,7 +259,7 @@
             }, 10000); 
         }
 
-        // --- 4. AŞAMA - KUTU SIRASI VE PATLATMA ---
+        // --- 4. AŞAMA ---
         let giftClicked = false;
         function startGiftSequence() {
             if(giftClicked) return;
@@ -271,22 +277,31 @@
                 else { clearInterval(interval); container.classList.add('hidden'); explodeGift(); }
             }, 1000); 
         }
+
         function explodeGift() {
             const giftBox = document.getElementById('final-gift');
             const giftScreen = document.getElementById('gift-screen');
             giftBox.classList.add('exploded');
+            
             const burstIcons = ["🍒", "🎃", "🎁", "✨"];
             const rect = giftBox.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            for (let i = 0; i < 40; i++) { createBurstParticle(centerX, centerY, burstIcons[Math.floor(Math.random() * burstIcons.length)]); }
+            
+            // OPTİMİZASYON: Parçacık sayısı 40'tan 25'e düşürüldü.
+            // Bu, telefonun donmasını önleyecek en kritik değişikliktir.
+            for (let i = 0; i < 25; i++) { 
+                createBurstParticle(centerX, centerY, burstIcons[Math.floor(Math.random() * burstIcons.length)]); 
+            }
+            
+            // Geçiş süresi 4 saniyeye düşürüldü (Donmuş hissi vermesin diye)
             setTimeout(() => {
                 const heartScreen = document.getElementById('heart-screen');
                 giftScreen.classList.add('hidden');
                 setTimeout(() => giftScreen.classList.add('gone'), 1500);
                 heartScreen.classList.remove('gone');
                 setTimeout(() => heartScreen.classList.remove('hidden'), 100);
-            }, 5000);
+            }, 4000);
         }
         
         function createHeartBurst(x, y, icon) {
@@ -300,19 +315,26 @@
             setTimeout(() => { particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg) scale(1.2)`; particle.style.opacity = 0; }, 50);
             setTimeout(() => { particle.remove(); }, 1500);
         }
+        
         function createBurstParticle(x, y, icon) {
             const particle = document.createElement('div');
             particle.classList.add('burst-particle');
             particle.innerHTML = icon;
             document.getElementById('gift-screen').appendChild(particle);
+            
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.random() * 400 + 200;
             const destinationX = Math.cos(angle) * distance;
             const destinationY = Math.sin(angle) * distance;
             const rotation = Math.random() * 720;
             const delay = Math.random() * 400;
-            setTimeout(() => { particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg)`; particle.style.opacity = 0; }, delay);
-            setTimeout(() => { particle.remove(); }, 4000);
+            
+            setTimeout(() => { 
+                particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg)`; 
+                particle.style.opacity = 0; 
+            }, delay);
+            
+            setTimeout(() => { particle.remove(); }, 3500);
         }
     </script>
 </body>
