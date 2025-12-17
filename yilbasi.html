@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sana Özel...</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- TEMEL AYARLAR --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            min-height: 100dvh;
+            background: radial-gradient(circle at center, #2b0002 0%, #0f0000 100%);
+            font-family: 'Cormorant Garamond', serif; color: #fff;
+            overflow: hidden; display: flex; justify-content: center; align-items: center; touch-action: manipulation;
+        }
+        #falling-canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 1; }
+        .screen { position: absolute; width: 100%; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1.5s ease; z-index: 10; }
+        .hidden { opacity: 0; pointer-events: none; }
+        .gone { display: none !important; }
+
+        /* --- 1. SAHNE: ZARF (GÜNCELLENDİ: Yavaş Açılma ve Patlama Efekti) --- */
+        #envelope-screen { z-index: 50; }
+        .envelope-wrapper { position: relative; cursor: pointer; animation: float 3s ease-in-out infinite; transform-style: preserve-3d; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        .envelope { width: 280px; height: 180px; background: #800020; position: relative; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 1px solid #5c0016; }
+        
+        /* Kapak açılma süresi 1.5s yapıldı (Yavaş ve Dramatik) */
+        .envelope::before { content: ''; position: absolute; top: 0; left: 0; border-left: 140px solid transparent; border-right: 140px solid transparent; border-top: 100px solid #a30029; transform-origin: top; transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 5; }
+        .envelope::after { content: ''; position: absolute; bottom: 0; left: 0; border-left: 140px solid #5c0016; border-right: 140px solid #5c0016; border-top: 90px solid transparent; z-index: 4; border-radius: 0 0 4px 4px; }
+        .seal { position: absolute; top: 35px; left: 50%; transform: translateX(-50%); width: 45px; height: 45px; background: #D4AF37; border-radius: 50%; z-index: 6; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #a30015; box-shadow: 0 2px 10px rgba(0,0,0,0.5); transition: opacity 0.5s; border: 2px solid #bfa345; }
+        .tap-text { margin-top: 40px; font-size: 1.3rem; color: #D4AF37; font-family: 'Parisienne', cursive; animation: pulse 2s infinite; }
+        .envelope-wrapper.open .envelope::before { transform: rotateX(180deg); z-index: 1; }
+        .envelope-wrapper.open .seal { opacity: 0; }
+        
+        /* Zarf Patlama Parçacıkları */
+        .heart-particle { position: absolute; font-size: 20px; pointer-events: none; transition: all 1.5s ease-out; opacity: 1; z-index: 55; color: #e31b23; }
+
+        /* --- 2. SAHNE: MEKTUP --- */
+        #letter-screen { justify-content: center; padding: 20px; z-index: 40; }
+        .paper { background: #fffcf5; color: #2c0003; width: 100%; max-width: 450px; padding: 40px 30px; border-radius: 2px; box-shadow: 0 0 60px rgba(255, 215, 0, 0.15); position: relative; text-align: center; border: 1px solid #e6dace; }
+        .paper::before { content: ''; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px solid #D4AF37; pointer-events: none; }
+        .icons-row { font-size: 1.4rem; margin-bottom: 25px; letter-spacing: 12px; opacity: 0.9; }
+        h1 { font-family: 'Parisienne', cursive; font-size: 2.5rem; margin-bottom: 30px; color: #800020; line-height: 1.2; }
+        p { font-size: 1.25rem; line-height: 1.7; margin-bottom: 25px; font-weight: 400; color: #4a0005; }
+        .signature { font-family: 'Parisienne', cursive; font-size: 2rem; margin-top: 30px; color: #a30015; }
+
+        /* --- 3. SAHNE: HEDİYE KUTUSU (GÜNCELLENDİ: Gerçekçi ve Yavaş Patlama) --- */
+        #gift-screen { z-index: 60; perspective: 1000px; }
+        
+        /* Kutu yok olma süresi uzatıldı */
+        .gift-box.exploded { transform: scale(0) rotate(20deg); opacity: 0; transition: all 1s ease-in; }
+
+        /* Gerçekçi Kutu Tasarımı */
+        .gift-box { 
+            width: 150px; height: 120px; position: relative; transform-style: preserve-3d; cursor: pointer; margin-bottom: 20px; 
+            animation: bounceGift 2.5s infinite ease-in-out; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5); transition: transform 0.3s; 
+        }
+        /* Kutu Gövdesi - Gradyan ve Gölgelendirme */
+        .gift-body { 
+            position: absolute; width: 100%; height: 100%; 
+            background: linear-gradient(to bottom, #d63031 0%, #a11a1b 100%); /* Üstten alta koyulaşan kırmızı */
+            border: 1px solid #911516;
+        }
+        /* Kutu Kapağı - Daha aydınlık gradyan ve hafif taşma efekti */
+        .gift-lid { 
+            position: absolute; top: -5px; left: -5px; width: 160px; height: 40px; 
+            background: linear-gradient(to bottom, #ff7675 0%, #d63031 100%);
+            border-bottom: 3px solid #b71540; z-index: 10; 
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateZ(2px);
+        }
+        /* Altın Kurdeleler - Metalik efekt */
+        .ribbon-v { position: absolute; left: 50%; height: 100%; width: 24px; background: linear-gradient(to right, #e1b12c, #fdcb6e, #e1b12c); transform: translateX(-50%); box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        .ribbon-h { position: absolute; top: 50%; width: 100%; height: 24px; background: linear-gradient(to bottom, #e1b12c, #fdcb6e, #e1b12c); transform: translateY(-50%); box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        .gift-lid .ribbon-v, .gift-lid .ribbon-h { background: linear-gradient(to right, #feda77, #fdcb6e, #feda77); } /* Kapaktaki kurdele daha parlak */
+
+        @keyframes bounceGift { 0%, 100% { transform: translateY(0) rotateX(5deg); } 50% { transform: translateY(-15px) rotateX(5deg); } }
+
+        /* Yavaşlatılmış Patlama Parçacıkları (3.5 saniye süzülme) */
+        .burst-particle {
+            position: absolute; top: 50%; left: 50%; font-size: 24px; pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: all 3.5s cubic-bezier(0.1, 0.8, 0.2, 1); /* Çok dramatik, yavaş süzülme */
+            opacity: 1; z-index: 65;
+        }
+
+        /* Final Mesajı */
+        .final-message {
+            position: absolute; top: 60%; left: 50%; transform: translate(-50%, 80px) scale(0.8);
+            width: 100%; text-align: center; opacity: 0;
+            transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #D4AF37; font-family: 'Parisienne', cursive; font-size: 2.5rem;
+            text-shadow: 0 3px 10px rgba(0,0,0,0.7); letter-spacing: 1px; padding: 0 20px;
+        }
+        .gift-box.exploded ~ .final-message { opacity: 1; transform: translate(-50%, -50%) scale(1); transition-delay: 0.5s; }
+
+        /* --- 4. SAHNE: KALP --- */
+        #heart-screen { z-index: 70; }
+        .big-heart { font-size: 8rem; color: #e31b23; animation: heartBeat 1.2s infinite; text-shadow: 0 0 50px rgba(227, 27, 35, 0.8); }
+        @keyframes heartBeat { 0% { transform: scale(1); } 14% { transform: scale(1.3); } 28% { transform: scale(1); } 42% { transform: scale(1.3); } 70% { transform: scale(1); } }
+        .love-note { font-size: 1.5rem; margin-top: 20px; font-family: 'Parisienne', cursive; color: #D4AF37; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="yilbasi_sarki.mp3" type="audio/ogg">
+    </audio>
+
+    <canvas id="falling-canvas"></canvas>
+
+    <div id="envelope-screen" class="screen" onclick="openEnvelope(event)">
+        <div class="envelope-wrapper" id="envelope">
+            <div class="envelope"><div class="seal">🎄</div></div>
+        </div>
+        <div class="tap-text">Dokun ve Aç...</div>
+    </div>
+
+    <div id="letter-screen" class="screen hidden">
+        <div class="paper">
+            <div class="icons-row">🍒🍬🎃🎋</div>
+            <h1>Mutlu Yıllar Sevgilim</h1>
+            <p>Bu yılın da en güzel hediyesi senin varlığın. Seninle paylaştığımız her an benim için paha biçilemez.</p>
+            <p>Yeni yılda, tüm hayallerimizde yine el ele olalım. Gülüşünle ısınan, birlikte nice kış günlerine...</p>
+            <div class="signature">Seni Seviyorum !</div>
+        </div>
+    </div>
+
+    <div id="gift-screen" class="screen hidden">
+        <div class="gift-box" id="final-gift" onclick="explodeGift(event)">
+            <div class="gift-lid"><div class="ribbon-v"></div><div class="ribbon-h"></div></div>
+            <div class="gift-body"><div class="ribbon-v"></div></div>
+        </div>
+        <div class="final-message">Gözlerini kapat... Şimdi eğlenceli kısma geçiyoruz !</div>
+    </div>
+
+    <div id="heart-screen" class="screen hidden">
+        <div class="big-heart">❤️</div>
+        <div class="love-note">İyi ki varsın...</div>
+    </div>
+
+    <script>
+        // --- ARKA PLAN EFEKTLERİ ---
+        const canvas = document.getElementById("falling-canvas");
+        const ctx = canvas.getContext("2d");
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
+        const icons = ["❄️", "🍬", "🎃", "🍒", "🎋"];
+        const particles = [];
+        for(let i=0; i<25; i++) particles.push({
+            x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+            size: Math.random() * 20 + 15, speed: Math.random() * 2 + 1,
+            icon: icons[Math.floor(Math.random() * icons.length)], opacity: Math.random() * 0.5 + 0.3
+        });
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                ctx.font = p.size + "px Arial"; ctx.globalAlpha = p.opacity; ctx.fillText(p.icon, p.x, p.y);
+                p.y += p.speed; if(p.y > canvas.height) p.y = -50;
+            });
+            requestAnimationFrame(drawParticles);
+        }
+        drawParticles();
+
+        // --- AKIŞ KONTROLÜ ---
+        function openEnvelope(event) {
+            const envelopeScreen = document.getElementById('envelope-screen');
+            const letterScreen = document.getElementById('letter-screen');
+            const envelope = document.getElementById('envelope');
+            const music = document.getElementById('bg-music');
+            music.volume = 0.5; music.play().catch(() => {});
+            
+            // Zarfı aç
+            envelope.classList.add('open');
+            
+            // YENİ: Zarftan Kalp Patlatma Efekti
+            const rect = envelope.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const heartIcons = ["❤️", "✨", "💖"];
+            for (let i = 0; i < 20; i++) {
+                 createHeartBurst(centerX, centerY, heartIcons[Math.floor(Math.random() * heartIcons.length)]);
+            }
+
+            // Yavaşça diğer sahneye geç (Süreler uzatıldı)
+            setTimeout(() => {
+                envelopeScreen.classList.add('hidden');
+                setTimeout(() => envelopeScreen.classList.add('gone'), 1500);
+                letterScreen.classList.remove('hidden'); letterScreen.classList.remove('gone');
+                startTimerForGift();
+            }, 2000); // Zarfın açılmasını izlemek için daha uzun bekle
+        }
+
+        function startTimerForGift() {
+            setTimeout(() => {
+                const letterScreen = document.getElementById('letter-screen');
+                const giftScreen = document.getElementById('gift-screen');
+                letterScreen.classList.add('hidden');
+                setTimeout(() => letterScreen.classList.add('gone'), 1500);
+                giftScreen.classList.remove('gone');
+                setTimeout(() => giftScreen.classList.remove('hidden'), 100);
+            }, 10000); // 10 saniye bekle
+        }
+
+        // --- KUTU PATLATMA (Yavaşlatılmış) ---
+        function explodeGift(event) {
+            const giftBox = document.getElementById('final-gift');
+            const giftScreen = document.getElementById('gift-screen');
+            const music = document.getElementById('bg-music');
+            if(music) music.volume = 1.0;
+
+            giftBox.classList.add('exploded');
+
+            const burstIcons = ["🍒", "🎃", "🎁", "✨"];
+            const rect = giftBox.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            for (let i = 0; i < 40; i++) { // Daha fazla parçacık
+                createBurstParticle(centerX, centerY, burstIcons[Math.floor(Math.random() * burstIcons.length)]);
+            }
+
+            // 5 saniye sonra Kalbe geç (Parçacıkların süzülmesi için süre arttı)
+            setTimeout(() => {
+                const heartScreen = document.getElementById('heart-screen');
+                giftScreen.classList.add('hidden');
+                setTimeout(() => giftScreen.classList.add('gone'), 1500);
+                heartScreen.classList.remove('gone');
+                setTimeout(() => heartScreen.classList.remove('hidden'), 100);
+            }, 5000);
+        }
+        
+        // YENİ: Zarf Kalp Patlaması Fonksiyonu
+        function createHeartBurst(x, y, icon) {
+            const particle = document.createElement('div');
+            particle.classList.add('heart-particle');
+            particle.innerHTML = icon;
+            document.getElementById('envelope-screen').appendChild(particle);
+            // Mühürden yukarı doğru fırlasınlar
+            const destinationX = (Math.random() - 0.5) * 200;
+            const destinationY = -(Math.random() * 250 + 50); // Hep yukarı
+            const rotation = Math.random() * 30 - 15;
+            setTimeout(() => {
+                particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg) scale(1.2)`;
+                particle.style.opacity = 0;
+            }, 50);
+            setTimeout(() => { particle.remove(); }, 1500);
+        }
+
+        // Kutu Patlama Parçacığı (Yavaşlatılmış Süzülme)
+        function createBurstParticle(x, y, icon) {
+            const particle = document.createElement('div');
+            particle.classList.add('burst-particle');
+            particle.innerHTML = icon;
+            document.getElementById('gift-screen').appendChild(particle);
+            
+            // Daha geniş ve rastgele dağılım
+            const angle = Math.random() * Math.PI * 2; // Rastgele açı
+            const distance = Math.random() * 400 + 200; // Merkeze uzaklık
+            const destinationX = Math.cos(angle) * distance;
+            const destinationY = Math.sin(angle) * distance;
+            const rotation = Math.random() * 720;
+            const delay = Math.random() * 400; // Rastgele başlama gecikmesi
+
+            setTimeout(() => {
+                particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg)`;
+                particle.style.opacity = 0;
+            }, delay);
+
+            // Temizlik süresi (3.5s animasyon + gecikme için)
+            setTimeout(() => { particle.remove(); }, 4000);
+        }
+    </script>
+</body>
+</html>
